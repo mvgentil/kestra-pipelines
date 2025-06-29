@@ -1,0 +1,122 @@
+id: scrapper_mercadolivre
+namespace: company.team
+
+tasks:
+
+  - id: setup_database
+    type: io.kestra.plugin.scripts.python.Script
+    beforeCommands:
+      - pip install sqlalchemy
+      - pip install psycopg2-binary
+    script: |
+      from sqlalchemy import create_engine, text
+
+      DB_HOST = "{{ kv('DB_HOST') }}"
+      DB_PORT = "{{ kv('DB_PORT') }}"
+      DB_NAME = "{{ kv('DB_NAME') }}"
+      DB_USER = "{{ kv('DB_USER') }}"
+      DB_PASSWORD = "{{ kv('DB_PASSWORD') }}"
+
+      engine = create_engine(f"postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}")
+      with engine.begin() as conn:
+          conn.execute(text("""
+              CREATE TABLE IF NOT EXISTS products (
+                  id SERIAL PRIMARY KEY,
+                  title VARCHAR(255) NOT NULL,
+                  price INTEGER NOT NULL,
+                  installment_price INTEGER NOT NULL,
+                  timestamp TIMESTAMP NOT NULL
+              )
+          """))
+      print("Database setup completed.")
+
+  - id: extract
+    type: io.kestra.plugin.scripts.python.Script
+    beforeCommands:
+      - pip install requests
+      - pip install beautifulsoup4
+      - pip install kestra
+    outputFiles:
+      - "*.json"
+    script: |
+      import requests
+      import time
+      import json
+      from bs4 import BeautifulSoup
+      from kestra import Kestra
+
+      def fetch_page(url):
+          response = requests.get(url)
+          if response.status_code == 200:
+              return response.text
+          return None
+
+      def parse_page(html_content):
+          soup = BeautifulSoup(html_content, 'html.parser')
+          products = []
+          for item in soup.find_all('li', class_='ui-search-layout__item'):
+              title = item.find('a', class_='poly-component__title').get_text(strip=True)
+              title = title.replace('Apple ', '')
+              title = title.replace(' - Distribuidor Autorizado', '')
+              prices = item.find_all('span', class_='andes-money-amount__fraction')
+              price = int(prices[1].get_text(strip=True).replace('.', ''))
+              installment_price = int(prices[2].get_text(strip=True).replace('.', ''))
+              timestamp = time.strftime('%Y-%m-%d %H:%M:%S')
+              products.append({'title': title, 'price': price, 'installment_price': installment_price, 'timestamp': timestamp})
+          return products
+
+
+      url = "https://lista.mercadolivre.com.br/celulares-telefones/celulares-smartphones/iphone-16/_Loja_apple#applied_filter_id%3DMODEL%26applied_filter_name%3DModelo%26applied_filter_order%3D11%26applied_value_id%3D41954949%26applied_value_name%3DiPhone+16%26applied_value_order%3D8%26applied_value_results%3D4%26is_custom%3Dfalse"
+
+      data = fetch_page(url)
+      products = parse_page(data) if data else []
+
+      with open("products.json", "w", encoding="utf-8") as f:
+          json.dump(products, f, ensure_ascii=False, indent=2)
+
+      print(f"Scraped {len(products)} products.")
+
+  - id: load
+    type: io.kestra.plugin.scripts.python.Script
+    beforeCommands:
+      - pip install sqlalchemy
+      - pip install psycopg2-binary
+      - pip install python-dotenv
+    inputFiles:
+      products.json: "{{ outputs.extract.outputFiles['products.json'] }}"
+    script: |
+      import json
+      from sqlalchemy import create_engine, text
+
+      DB_HOST = "{{ kv('DB_HOST') }}"
+      DB_PORT = "{{ kv('DB_PORT') }}"
+      DB_NAME = "{{ kv('DB_NAME') }}"
+      DB_USER = "{{ kv('DB_USER') }}"
+      DB_PASSWORD = "{{ kv('DB_PASSWORD') }}"
+
+      engine = create_engine(f"postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}")
+
+      with open("products.json", "r", encoding="utf-8") as f:
+          products = json.load(f)
+          print(products)
+      with engine.begin() as conn:
+          for product in products:
+            print(product)
+            conn.execute(
+                text("""
+                    INSERT INTO products (title, price, installment_price, timestamp)
+                    VALUES (:title, :price, :installment_price, :timestamp)
+                """),
+                {
+                    "title": product["title"],
+                    "price": product["price"],
+                    "installment_price": product["installment_price"],
+                    "timestamp": product["timestamp"]
+                }
+              )
+      print(f"Inserted {len(products)} products into database.")
+
+triggers:
+  - id: schedule
+    type: io.kestra.plugin.core.trigger.Schedule
+    cron: "@hourly"
