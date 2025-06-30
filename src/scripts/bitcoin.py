@@ -57,8 +57,9 @@ def save_to_database(price, timestamp):
 if __name__ == "__main__":
     setup_database()
     
-    price, timestamp = bitcoin_price()
-    save_to_database(price, timestamp)
-        #wait_time = 60 * 5  # 5 minutos
-        #print(f"Aguardando {wait_time} segundos para a próxima coleta...")
-        #time.sleep(wait_time)
+    while True:
+        price, timestamp = bitcoin_price()
+        save_to_database(price, timestamp)
+        wait_time = 60 * 5  # 5 minutos
+        print(f"Aguardando {wait_time} segundos para a próxima coleta...")
+        time.sleep(wait_time)

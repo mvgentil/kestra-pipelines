@@ -21,57 +21,55 @@ engine = create_engine(
 st.set_page_config(page_title="Bitcoin Dashboard", page_icon=":robot_face:", layout="wide")
 st.title("Bitcoin Dashboard")
 
-st.markdown("""
-    Este é um dashboard simples para visualizar o preço do Bitcoin.
-    Ele utiliza a API do Yahoo Finance para obter os dados.
-    A cada 5 minutos, o preço do Bitcoin é atualizado e salvo em um banco de dados PostgreSQL.
-    A orquestração do pipeline é feita com Kestra, que executa o scraper e armazena os dados no banco de dados.
-    O dashboard é construído com Streamlit e utiliza Altair para visualização dos dados.
-""")
+col1, col2 = st.columns(2)
 
-st.markdown("""
-    ### Visite o repositório do projeto no GitHub:
-    [Projeto Kestra - Bitcoin Monitor](https://github.com/mvgentil/kestra-pipelines)
-""")
+with col1:
+    st.markdown("""
+        Este é um dashboard simples para visualizar o preço do Bitcoin.
+        Ele utiliza a API do Yahoo Finance para obter os dados.
+        A cada 5 minutos, o preço do Bitcoin é atualizado e salvo em um banco de dados PostgreSQL.
+        A orquestração do pipeline é feita com Kestra, que executa o scraper e armazena os dados no banco de dados.
+        O dashboard é construído com Streamlit e utiliza Altair para visualização dos dados.
+    """)
 
-st.markdown("""
-    ### Preço Atual do Bitcoin
-""")
+    st.markdown("""
+        ### Visite o repositório do projeto no GitHub:
+        [Projeto Kestra - Bitcoin Monitor](https://github.com/mvgentil/kestra-pipelines)
+    """)
 
-# Add a button to refresh the data
-if st.button("🔄 Atualizar dados"):
-    st.rerun()
+with col2:
+    if st.button("🔄 Atualizar dados"):
+        st.rerun()
 
-# Query data from the database
-query = text("""
-    SELECT timestamp, price
-    FROM bitcoin_price
-    WHERE timestamp >= NOW() - INTERVAL '24 HOURS'
-    ORDER BY timestamp ASC
-""")
-try:
-    df = pd.read_sql(query, engine)
-    if not df.empty:
-        
-        chart = (
-            alt.Chart(df)
-            .mark_line(color="#1f77b4")
-            .encode(
-                x=alt.X("timestamp:T", title="Horário"),
-                y=alt.Y("price:Q", title="Preço (BRL)", scale=alt.Scale(zero=False)),
-                tooltip=["timestamp:T", "price:Q"]
+    # Query data from the database
+    query = text("""
+        SELECT timestamp, price
+        FROM bitcoin_price
+        WHERE timestamp >= NOW() - INTERVAL '24 HOURS'
+        ORDER BY timestamp ASC
+    """)
+    try:
+        df = pd.read_sql(query, engine)
+        if not df.empty:
+            st.markdown("### Preço do Bitcoin nas últimas 24 horas")
+            chart = (
+                alt.Chart(df)
+                .mark_line(color="#1f77b4")
+                .encode(
+                    x=alt.X("timestamp:T", title="Horário"),
+                    y=alt.Y("price:Q", title="Preço (BRL)", scale=alt.Scale(zero=False)),
+                    tooltip=["timestamp:T", "price:Q"]
+                )
+                .properties(
+                    width=800,
+                    height=400
+                )
+                .interactive()
             )
-            .properties(
-                width=800,
-                height=400,
-                title="Preço do Bitcoin nas últimas 24 horas"
-            )
-            .interactive()
-        )
-        st.altair_chart(chart, use_container_width=True)
-        st.write("Última atualização:", df["timestamp"].max())
-        st.write("Preço atual:", df["price"].iloc[-1])
-    else:
-        st.warning("Nenhum dado encontrado no banco de dados nas últimas 24 horas.")
-except Exception as e:
-    st.error(f"Erro ao consultar o banco de dados: {e}")
+            st.altair_chart(chart, use_container_width=True)
+            st.write("Última atualização:", df["timestamp"].max())
+            st.write("Preço atual:", df["price"].iloc[-1])
+        else:
+            st.warning("Nenhum dado encontrado no banco de dados nas últimas 24 horas.")
+    except Exception as e:
+        st.error(f"Erro ao consultar o banco de dados: {e}")
