@@ -6,6 +6,10 @@ Este projeto monitora o preço do Bitcoin em tempo real, armazena os dados em um
 
 ![Dashboard](img/dashboard.png)
 
+## Arquitetura
+
+![Diagrama](img/diagram.png)
+
 ## Funcionalidades
 
 - **Coleta de Dados:** Busca o preço do Bitcoin a cada 5 minutos utilizando a biblioteca `yfinance`.

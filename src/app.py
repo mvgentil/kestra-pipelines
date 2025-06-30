@@ -57,7 +57,7 @@ with col2:
                 .mark_line(color="#1f77b4")
                 .encode(
                     x=alt.X("timestamp:T", title="Horário"),
-                    y=alt.Y("price:Q", title="Preço (BRL)", scale=alt.Scale(zero=False)),
+                    y=alt.Y("price:Q", title="Preço (USD)", scale=alt.Scale(zero=False)),
                     tooltip=["timestamp:T", "price:Q"]
                 )
                 .properties(
