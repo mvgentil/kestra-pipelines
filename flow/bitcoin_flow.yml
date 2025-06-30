@@ -1,0 +1,99 @@
+# This is a Kestra flow for scraping Bitcoin prices and storing them in a PostgreSQL database.
+# It scrapes the current price of Bitcoin and stores it in a PostgreSQL database.
+# The flow consists of two main tasks:
+# 1. Extract: Fetches the current price of Bitcoin using the yfinance library.
+# 2. Load: Inserts the extracted price into a PostgreSQL database.
+
+id: bitcoin_price
+namespace: company.team
+
+tasks:
+
+  - id: setup_database
+    type: io.kestra.plugin.scripts.python.Script
+    beforeCommands:
+      - pip install sqlalchemy
+      - pip install psycopg2-binary
+    script: |
+      
+      from sqlalchemy import create_engine, text
+
+      DB_HOST = "{{ kv('DB_HOST') }}"
+      DB_PORT = "{{ kv('DB_PORT') }}"
+      DB_NAME = "{{ kv('DB_NAME') }}"
+      DB_USER = "{{ kv('DB_USER') }}"
+      DB_PASSWORD = "{{ kv('DB_PASSWORD') }}"
+
+      engine = create_engine(f"postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}")
+
+      with engine.begin() as conn:
+          conn.execute(text("""
+                  CREATE TABLE IF NOT EXISTS bitcoin_price (
+                      id SERIAL PRIMARY KEY,
+                      price DECIMAL(20, 6) NOT NULL,
+                      timestamp TIMESTAMP NOT NULL
+                      )
+                  """))
+      print("Database setup completed.")
+
+  - id: extract
+    type: io.kestra.plugin.scripts.python.Script
+    beforeCommands:
+      - pip install kestra
+      - pip install yfinance
+    script: |
+      import requests
+      import time
+      import yfinance as yf
+      from kestra import Kestra
+
+      def bitcoin_price():
+          btc = yf.Ticker("BTC-USD")
+          price = btc.history(period="1d")["Close"].iloc[-1]
+          timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+          return price, timestamp
+
+      price, timestamp = bitcoin_price()
+
+      Kestra.outputs({'price': price, 'timestamp': timestamp})
+
+  - id: load
+    type: io.kestra.plugin.scripts.python.Script
+    beforeCommands:
+      - pip install sqlalchemy
+      - pip install psycopg2-binary
+    script: |
+      from sqlalchemy import create_engine, text
+      import datetime
+
+      # Variáveis de conexão
+      DB_HOST = "{{ kv('DB_HOST') }}"
+      DB_PORT = "{{ kv('DB_PORT') }}"
+      DB_NAME = "{{ kv('DB_NAME') }}"
+      DB_USER = "{{ kv('DB_USER') }}"
+      DB_PASSWORD = "{{ kv('DB_PASSWORD') }}"
+
+      # Criação da engine com SQLAlchemy
+      engine = create_engine(f"postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}")
+
+      # Dados recebidos do output anterior
+      price = round({{ outputs.extract.vars.price }}, 6)
+      timestamp = "{{ outputs.extract.vars.timestamp }}"  # já vem como string
+
+      # Inserção no banco
+      try:
+          with engine.connect() as connection:
+              print(f"Inserindo dados: price={price}, timestamp={timestamp}")
+              connection.execute(
+                  text("INSERT INTO bitcoin_price (price, timestamp) VALUES (:price, :timestamp)"),
+                  {"price": price, "timestamp": timestamp}
+              )
+              print("Dados salvos com sucesso no banco de dados.")
+      except Exception as e:
+          print(f"Erro ao salvar no banco de dados: {e}")
+
+triggers:
+  - id: schedule
+    type: io.kestra.plugin.core.trigger.Schedule
+    cron: "*/5 * * * *"
+    timezone: America/Sao_Paulo

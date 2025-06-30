@@ -120,3 +120,10 @@ triggers:
   - id: schedule
     type: io.kestra.plugin.core.trigger.Schedule
     cron: "@hourly"
+    timezone: America/Sao_Paulo
+# This is a Kestra flow for scraping products from Mercado Livre and storing them in a PostgreSQL database.
+# It scrapes product details such as title, price, installment price, and timestamp.
+# The flow consists of three main tasks:
+# 1. Extract: Fetches the HTML content of the product list page from Mercado Livre.
+# 2. Transform: Parses the HTML content and extracts product information.
+# 3. Load: Inserts the extracted product information into a PostgreSQL database.

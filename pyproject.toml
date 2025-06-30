@@ -10,4 +10,5 @@ dependencies = [
     "python-dotenv>=1.1.1",
     "requests>=2.32.4",
     "sqlalchemy>=2.0.41",
+    "yfinance>=0.2.64",
 ]

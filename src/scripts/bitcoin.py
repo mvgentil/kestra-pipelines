@@ -1,85 +1,61 @@
-import requests
 import time
-import psycopg2
 import os
 import yfinance as yf
 from dotenv import load_dotenv
-from decimal import Decimal, ROUND_HALF_UP
+from sqlalchemy import create_engine, text
 
+# Carrega variáveis do .env
 load_dotenv()
 
-# Database connection parameters
+# Parâmetros do banco
 DB_HOST = os.getenv("DB_HOST")
 DB_PORT = os.getenv("DB_PORT")
 DB_NAME = os.getenv("DB_NAME")
 DB_USER = os.getenv("DB_USER")
 DB_PASSWORD = os.getenv("DB_PASSWORD")
 
+# Criação da engine (uso compartilhado)
+engine = create_engine(f"postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}")
 
 def bitcoin_price():
+    """Busca o preço atual do Bitcoin e retorna com timestamp."""
     btc = yf.Ticker("BTC-USD")
     price = btc.history(period="1d")["Close"].iloc[-1]
-    price = Decimal(price)
     timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
     return price, timestamp
 
-
-def create_connection():
-    """Creates a connection to the PostgreSQL database."""
-    print("Creating database connection...")
-    conn = psycopg2.connect(
-        dbname=DB_NAME,
-        user=DB_USER,
-        password=DB_PASSWORD,
-        host=DB_HOST,
-        port=DB_PORT
-    )
-    print("Database connection established.")
-    return conn
-
-def setup_database(conn):
-    """Sets up the database by creating the necessary table."""
-    print("Setting up database...")
-    try:
-        cursor = conn.cursor()
-        cursor.execute("""
+def setup_database():
+    """Cria a tabela no banco, se ainda não existir."""
+    with engine.begin() as conn:
+        conn.execute(text("""
             CREATE TABLE IF NOT EXISTS bitcoin_price (
                 id SERIAL PRIMARY KEY,
                 price DECIMAL(20, 6) NOT NULL,
                 timestamp TIMESTAMP NOT NULL
-                )
-            """)
-        conn.commit()
-        cursor.close()
-        print("Database setup completed successfully.")
-    except Exception as e:
-        print(f"Error setting up database: {e}")
-
-def save_to_database(price, timestamp, table_name='bitcoin_price'):
-    """Saves the bitcoin price to the database."""
-    print("Saving data to database...")
-    try:
-        cursor = conn.cursor()
-        print(f"Inserting data: Price USD: {price}, Timestamp: {timestamp}")
-        cursor.execute(f"""
-            INSERT INTO {table_name} (price, timestamp) VALUES (
-                {price}, '{timestamp}'
             )
-        """)
-        conn.commit()
-        cursor.close()
-        print("Data saved to database successfully.")
-    except Exception as e:
-        print(f"Error saving to database: {e}")
+        """))
+    print("Database setup completed.")
 
+def save_to_database(price, timestamp):
+    """Salva o preço do Bitcoin no banco."""
+    price = round(float(price), 6)
+
+    try:
+        with engine.connect() as connection:
+            print(f"Inserindo dados: price={price}, timestamp={timestamp}")
+            connection.execute(
+                text("INSERT INTO bitcoin_price (price, timestamp) VALUES (:price, :timestamp)"),
+                {"price": price, "timestamp": timestamp}
+            )
+            print("Dados salvos com sucesso.")
+    except Exception as e:
+        print(f"Erro ao salvar no banco de dados: {e}")
 
 if __name__ == "__main__":
-    conn = create_connection()
-    setup_database(conn)
-
+    setup_database()
     while True:
         price, timestamp = bitcoin_price()
         save_to_database(price, timestamp)
-        wait_time = 60 * 5  # Wait for 5 minutes before the next fetch
-        print(f"Waiting for {wait_time} seconds before the next fetch...")
+        wait_time = 60 * 5  # 5 minutos
+        print(f"Aguardando {wait_time} segundos para a próxima coleta...")
         time.sleep(wait_time)
