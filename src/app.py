@@ -25,11 +25,22 @@ st.markdown("""
     Este é um dashboard simples para visualizar o preço do Bitcoin.
     Ele utiliza a API do Yahoo Finance para obter os dados.
     A cada 5 minutos, o preço do Bitcoin é atualizado e salvo em um banco de dados PostgreSQL.
+    A orquestração do pipeline é feita com Kestra, que executa o scraper e armazena os dados no banco de dados.
+    O dashboard é construído com Streamlit e utiliza Altair para visualização dos dados.
+""")
+
+st.markdown("""
+    ### Visite o repositório do projeto no GitHub:
+    [Projeto Kestra - Bitcoin Monitor](https://github.com/mvgentil/kestra-pipelines)
 """)
 
 st.markdown("""
     ### Preço Atual do Bitcoin
 """)
+
+# Add a button to refresh the data
+if st.button("🔄 Atualizar dados"):
+    st.rerun()
 
 # Query data from the database
 query = text("""
