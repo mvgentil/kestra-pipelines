@@ -1,8 +1,9 @@
-# This is a Kestra flow for scraping Bitcoin prices and storing them in a PostgreSQL database.
-# It scrapes the current price of Bitcoin and stores it in a PostgreSQL database.
-# The flow consists of two main tasks:
-# 1. Extract: Fetches the current price of Bitcoin using the yfinance library.
-# 2. Load: Inserts the extracted price into a PostgreSQL database.
+# This is a Kestra flow to extract Bitcoin price and store it in a PostgreSQL database.
+# It uses the yfinance library to fetch the Bitcoin price and SQLAlchemy to interact with the database.
+# The flow consists of three main tasks:
+# 1. Extract: Fetches the Bitcoin price and timestamp.
+# 2. Transform: Converts the extracted data into a dictionary.
+# 3. Load: Inserts the transformed data into the database.
 
 id: bitcoin_price
 namespace: company.team
@@ -41,21 +42,26 @@ tasks:
     beforeCommands:
       - pip install kestra
       - pip install yfinance
+      - pip install pytz
     script: |
       import requests
-      import time
+      from datetime import datetime
+      import pytz
       import yfinance as yf
       from kestra import Kestra
+
+      br_tz = pytz.timezone("America/Sao_Paulo")
 
       def bitcoin_price():
           btc = yf.Ticker("BTC-USD")
           price = btc.history(period="1d")["Close"].iloc[-1]
-          timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+          timestamp = datetime.now(br_tz)
           return price, timestamp
 
       price, timestamp = bitcoin_price()
+      timestamp_str = timestamp.strftime("%Y-%m-%d %H:%M:%S")
 
-      Kestra.outputs({'price': price, 'timestamp': timestamp})
+      Kestra.outputs({'price': price, 'timestamp': timestamp_str})
 
   - id: load
     type: io.kestra.plugin.scripts.python.Script
@@ -82,7 +88,7 @@ tasks:
 
       # Inserção no banco
       try:
-          with engine.connect() as connection:
+          with engine.begin() as connection:
               print(f"Inserindo dados: price={price}, timestamp={timestamp}")
               connection.execute(
                   text("INSERT INTO bitcoin_price (price, timestamp) VALUES (:price, :timestamp)"),

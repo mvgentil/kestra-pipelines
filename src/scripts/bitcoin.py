@@ -1,4 +1,6 @@
+from datetime import datetime
 import time
+import pytz
 import os
 import yfinance as yf
 from dotenv import load_dotenv
@@ -16,12 +18,13 @@ DB_PASSWORD = os.getenv("DB_PASSWORD")
 
 # Criação da engine (uso compartilhado)
 engine = create_engine(f"postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}")
+br_tz = pytz.timezone("America/Sao_Paulo")
 
 def bitcoin_price():
     """Busca o preço atual do Bitcoin e retorna com timestamp."""
     btc = yf.Ticker("BTC-USD")
     price = btc.history(period="1d")["Close"].iloc[-1]
-    timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+    timestamp = datetime.now(br_tz).strftime("%Y-%m-%d %H:%M:%S")
     return price, timestamp
 
 def setup_database():
@@ -41,7 +44,7 @@ def save_to_database(price, timestamp):
     price = round(float(price), 6)
 
     try:
-        with engine.connect() as connection:
+        with engine.begin() as connection:
             print(f"Inserindo dados: price={price}, timestamp={timestamp}")
             connection.execute(
                 text("INSERT INTO bitcoin_price (price, timestamp) VALUES (:price, :timestamp)"),
@@ -53,9 +56,9 @@ def save_to_database(price, timestamp):
 
 if __name__ == "__main__":
     setup_database()
-    while True:
-        price, timestamp = bitcoin_price()
-        save_to_database(price, timestamp)
-        wait_time = 60 * 5  # 5 minutos
-        print(f"Aguardando {wait_time} segundos para a próxima coleta...")
-        time.sleep(wait_time)
+    
+    price, timestamp = bitcoin_price()
+    save_to_database(price, timestamp)
+        #wait_time = 60 * 5  # 5 minutos
+        #print(f"Aguardando {wait_time} segundos para a próxima coleta...")
+        #time.sleep(wait_time)
