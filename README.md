@@ -61,6 +61,10 @@ docker-compose up -d
 
 O Kestra irá executar o fluxo a cada 5 minutos, coletando e salvando o preço do Bitcoin.
 
+**Passo 4: Acessar o Dashboard**
+
+Acesse `http://localhost:8501` no seu navegador para ver o dashboard.
+
 ### 2. Execução Manual do Script
 
 Você pode executar o script de coleta de dados manualmente.
@@ -111,6 +115,7 @@ Acesse `http://localhost:8501` no seu navegador para ver o dashboard.
 │   └── app.py                # Aplicação Streamlit para o dashboard
 ├── .env.example              # Exemplo de arquivo de variáveis de ambiente
 ├── docker-compose.yml        # Arquivo de configuração do Docker Compose
+├── Dockerfile                # Arquivo de configuração do Docker para o Streamlit app
 ├── pyproject.toml            # Dependências do projeto
 └── README.md                 # Este arquivo
 ```

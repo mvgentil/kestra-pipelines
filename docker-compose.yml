@@ -62,3 +62,13 @@ services:
     depends_on:
       postgres:
         condition: service_started
+
+  streamlit:
+    build: .
+    ports:
+      - "8501:8501"
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
