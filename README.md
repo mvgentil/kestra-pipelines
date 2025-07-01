@@ -59,16 +59,17 @@ Acesse `http://localhost:8501` no seu navegador para ver o dashboard.
 
 ### 2. Execução Manual
 
-Você pode executar o script de coleta de dados e a aplicação Streamlit manually.
+Você pode executar o script de coleta de dados e a aplicação Streamlit manualmente.
 
 **Passo 1: Pré-requisitos**
 
 - Python 3.12 ou superior
-- Docker e Docker Compose (para o banco de dados)
+- Docker e Docker Compose (para o banco de dados) - opcional
 
-**Passo 2: Iniciar o Banco de Dados**
+**Passo 2: Iniciar o Banco de Dados (caso utilize o PostgreSQL local)**
 
-Inicie o container do PostgreSQL com o Docker:
+Se utilizar um banco de dados externo, pule esse passo.
+Inicie o container do PostgreSQL com o Docker, caso queira utilizar o banco de dados local.:
 
 ```bash
 docker-compose up -d postgres
@@ -77,6 +78,7 @@ docker-compose up -d postgres
 **Passo 3: Configurar Variáveis de Ambiente**
 
 Crie um arquivo `.env` na raiz do projeto, baseado no `.env.example`. As variáveis padrão já estão configuradas para se conectar ao container do PostgreSQL.
+Para utilizar um banco de dados externo, preencha as credenciais de acordo com o seu banco de dados.
 
 **Passo 4: Instalar Dependências**
 
