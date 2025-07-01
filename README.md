@@ -19,38 +19,30 @@ Este projeto monitora o preço do Bitcoin em tempo real, armazena os dados em um
 
 ## Como Executar
 
-Existem duas maneiras de executar o projeto: manualmente ou com o Kestra (recomendado).
+Existem duas maneiras de executar o projeto:
 
-### Pré-requisitos
+### 1. Com Docker Compose (Recomendado)
 
-- Python 3.12 ou superior
-- Docker e Docker Compose
+Esta abordagem utiliza o Docker Compose para orquestrar todos os serviços (Kestra, PostgreSQL e Streamlit) de forma automática.
 
-### 1. Execução com Kestra (Recomendado)
+**Passo 1: Iniciar os Serviços**
 
-Esta abordagem utiliza o Kestra para orquestrar o fluxo de dados de forma automática.
-
-**Passo 1: Configurar Variáveis de Ambiente**
-
-Crie um arquivo `.env` na raiz do projeto com as seguintes variáveis de ambiente para o banco de dados se quiser usar o mesmo banco do Kestra:
-
-```
-DB_HOST=postgres
-DB_PORT=5432
-DB_NAME=kestra
-DB_USER=kestra
-DB_PASSWORD=k3str4
-```
-
-Caso queira utilizar um banco de dados diferente, configure as variáveis de ambiente conforme suas preferências.
-
-**Passo 2: Iniciar os Serviços com Docker Compose**
-
-O `docker-compose.yml` irá configurar e iniciar os contêineres do Kestra e do PostgreSQL.
+O `docker-compose.yml` irá configurar e iniciar os contêineres do Kestra, PostgreSQL e da aplicação Streamlit.
 
 ```bash
-docker-compose up -d
+docker-compose up -d --build
 ```
+
+**Passo 2: Configurar Variáveis no Kestra KV Store**
+
+1. Acesse a interface do Kestra em `http://localhost:8080`.
+2. No menu lateral, vá para "KV Store".
+3. Crie as seguintes chaves e preencha com os valores correspondentes:
+   - `DB_HOST`: `postgres`
+   - `DB_PORT`: `5432`
+   - `DB_NAME`: `kestra`
+   - `DB_USER`: `kestra`
+   - `DB_PASSWORD`: `k3str4`
 
 **Passo 3: Configurar o Flow no Kestra**
 
@@ -65,37 +57,42 @@ O Kestra irá executar o fluxo a cada 5 minutos, coletando e salvando o preço d
 
 Acesse `http://localhost:8501` no seu navegador para ver o dashboard.
 
-### 2. Execução Manual do Script
+### 2. Execução Manual
 
-Você pode executar o script de coleta de dados manualmente.
+Você pode executar o script de coleta de dados e a aplicação Streamlit manually.
 
-**Passo 1: Instalar Dependências**
+**Passo 1: Pré-requisitos**
+
+- Python 3.12 ou superior
+- Docker e Docker Compose (para o banco de dados)
+
+**Passo 2: Iniciar o Banco de Dados**
+
+Inicie o container do PostgreSQL com o Docker:
 
 ```bash
-pip install -r requirements.txt 
+docker-compose up -d postgres
+```
+
+**Passo 3: Configurar Variáveis de Ambiente**
+
+Crie um arquivo `.env` na raiz do projeto, baseado no `.env.example`. As variáveis padrão já estão configuradas para se conectar ao container do PostgreSQL.
+
+**Passo 4: Instalar Dependências**
+
+```bash
+pip install -r requirements.txt
 # ou, se você usa uv:
 uv pip install -r requirements.txt
 ```
 
-**Passo 2: Executar o Script**
+**Passo 5: Executar o Script de Coleta**
 
 ```bash
 python src/scripts/bitcoin.py
 ```
 
-O script irá criar a tabela no banco de dados (se não existir) e começará a coletar e salvar os dados a cada 5 minutos.
-
-## Dashboard com Streamlit
-
-O dashboard exibe os dados coletados e armazenados no banco de dados.
-
-### Como Executar o Dashboard
-
-**Passo 1: Certifique-se de que o `.env` está configurado**
-
-O Streamlit usará o mesmo arquivo `.env` para se conectar ao banco de dados.
-
-**Passo 2: Iniciar a Aplicação Streamlit**
+**Passo 6: Iniciar a Aplicação Streamlit**
 
 ```bash
 streamlit run src/app.py

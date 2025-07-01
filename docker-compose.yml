@@ -68,7 +68,9 @@ services:
     ports:
       - "8501:8501"
     env_file:
-      - .env
+      - .env.example
+    environment:
+      - DB_HOST=postgres
     depends_on:
       postgres:
         condition: service_healthy
