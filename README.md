@@ -15,7 +15,7 @@ Este projeto monitora o preço do Bitcoin em tempo real, armazena os dados em um
 - **Coleta de Dados:** Busca o preço do Bitcoin a cada 5 minutos utilizando a biblioteca `yfinance`.
 - **Armazenamento:** Salva o histórico de preços em um banco de dados PostgreSQL.
 - **Orquestração:** Utiliza o Kestra para automatizar o processo de coleta e armazenamento de dados.
-- **Visualização:** Apresenta um dashboard com o histórico de preços das últimas 24 horas, atualizável em tempo real.
+- **Visualização:** Apresenta um dashboard com o histórico de preços das últimas 24 horas, 7 dias, ou todo o período, atualizável em tempo real.
 
 ## Como Executar
 
